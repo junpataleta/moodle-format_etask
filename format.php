@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir.'/filelib.php');
 require_once($CFG->libdir.'/completionlib.php');
-require_once($CFG->dirroot. '/course/format/etask/format_etask_lib.php');
+require_once($CFG->dirroot.'/course/format/etask/format_etask_lib.php');
 
 // Horrible backwards compatible parameter aliasing..
 if ($topic = optional_param('topic', 0, PARAM_INT)) {
@@ -48,13 +48,13 @@ if (($marker >= 0) && has_capability('moodle/course:setcurrentsection', $context
 }
 
 // Make sure section 0 is created.
-course_create_sections_if_missing($course, range(0, $course->numsections));
+course_create_sections_if_missing($course, 0);
 
 $renderer = $PAGE->get_renderer('format_etask');
 
 // ETask topics format START.
-$etaskLib = new FormatEtaskLib();
-$etaskConfig = $etaskLib->getEtaskConfig($course);
+$etasklib = new FormatEtaskLib();
+$etaskconfig = $etasklib->get_etask_config($course);
 
 if (has_capability('format/etask:teacher', $context)
     || has_capability('format/etask:noneditingteacher', $context)
@@ -65,8 +65,8 @@ if (has_capability('format/etask:teacher', $context)
     require_once($CFG->dirroot . '/grade/lib.php');
 
     // ETask above the sections.
-    if ($etaskConfig['placement'] === FormatEtaskLib::PLACEMENT_ABOVE) {
-        $renderer->renderGradeTable($context, $course, $etaskLib);
+    if ($etaskconfig['placement'] === FormatEtaskLib::PLACEMENT_ABOVE) {
+        $renderer->render_grade_table($context, $course, $etasklib);
     }
 
     // Sections.
@@ -77,8 +77,8 @@ if (has_capability('format/etask:teacher', $context)
     }
 
     // ETask below the sections.
-    if ($etaskConfig['placement'] === FormatEtaskLib::PLACEMENT_BELOW) {
-        $renderer->renderGradeTable($context, $course, $etaskLib);
+    if ($etaskconfig['placement'] === FormatEtaskLib::PLACEMENT_BELOW) {
+        $renderer->render_grade_table($context, $course, $etasklib);
     }
 } else {
     // Sections.

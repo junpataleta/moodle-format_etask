@@ -25,7 +25,11 @@
 
 
 defined('MOODLE_INTERNAL') || die();
+
+use \format_etask\output\progress_bar;
+
 require_once($CFG->dirroot.'/course/format/renderer.php');
+require_once($CFG->dirroot.'/course/format/etask/classes/output/progress_bar.php');
 
 /**
  * Basic renderer for eTask topics format.
@@ -37,13 +41,16 @@ class format_etask_renderer extends format_section_renderer_base
 {
 
     /**
-     *
      * @var FormatEtaskLib
      */
-    private $etaskLib;
+    private $etasklib;
 
     /**
-     *
+     * @var string
+     */
+    private $etaskversion;
+
+    /**
      * @var array
      */
     private $config;
@@ -54,9 +61,10 @@ class format_etask_renderer extends format_section_renderer_base
      * @param moodle_page $page
      * @param string $target one of rendering target constants
      */
-    public function __construct(moodle_page $page, $target)
-    {
+    public function __construct(moodle_page $page, $target) {
         parent::__construct($page, $target);
+
+        $this->etaskversion = get_config('format_etask', 'version');
 
         // Since format_etask_renderer::section_edit_controls() only displays the 'Set current section' control
         // when editing mode is on we need to be sure that the link 'Turn editing mode on' is available for a user
@@ -65,14 +73,25 @@ class format_etask_renderer extends format_section_renderer_base
     }
 
     /**
+     * Render progress bar.
+     *
+     * @param templatable $progressbar
+     * @return string
+     * @throws moodle_exception
+     */
+    public function render_progress_bar(templatable $progressbar): string {
+        $data = $progressbar->export_for_template($this);
+        return $this->render_from_template('format_etask/progress_bar', $data);
+    }
+
+    /**
      * Html representaiton of user picture and name with link to user profile.
      *
      * @param stdClass $user
      * @return string
      */
-    private function renderUserHead(stdClass $user)
-    {
-        $userPicture = $this->output->user_picture($user, [
+    private function render_user_head(stdClass $user): string {
+        $userpicture = $this->output->user_picture($user, [
             'size' => 35,
             'link' => true,
             'popup' => true
@@ -82,153 +101,160 @@ class format_etask_renderer extends format_section_renderer_base
             'course' => $this->page->course->id
         ]);
 
-        return $userPicture . ' ' . html_writer::link($url, $user->firstname . ' ' . $user->lastname);
+        return $userpicture . ' ' . html_writer::link($url, $user->firstname . ' ' . $user->lastname);
     }
 
     /**
      * Html representation of activities head.
      *
-     * @param grade_item $gradeItem
-     * @param int $itemNum
-     * @param int $studentsCount
-     * @param array $progressChartData
-     * @param int $cmId
-     * @param array $completionExpected
+     * @param grade_item $gradeitem
+     * @param int $itemnum
+     * @param int $studentscount
+     * @param array $progressbardata
+     * @param int $cmid
+     * @param string $completionexpected
      * @return string
+     * @throws coding_exception
+     * @throws moodle_exception
      */
-    private function renderActivitiesHead(
-        grade_item $gradeItem,
-        $itemNum,
-        $studentsCount,
-        array $progressChartData,
-        $cmId,
-        $completionExpected)
-    {
-        $sessKey = sesskey();
-        $sectionReturn = optional_param('sr', 0, PARAM_INT);
+    private function render_activities_head(
+        grade_item $gradeitem,
+        int $itemnum,
+        int $studentscount,
+        array $progressbardata,
+        int $cmid,
+        string $completionexpected): string {
+        $sesskey = sesskey();
+        $sectionreturn = optional_param('sr', 0, PARAM_INT);
 
-        $itemTitleShort = strtoupper(substr($gradeItem->itemmodule, 0, 1)) . $itemNum;
-        $gradeSettings = $this->renderGradeSettings($gradeItem, $this->page->context);
+        $itemtitleshort = strtoupper(substr($gradeitem->itemmodule, 0, 1)) . $itemnum;
+        $gradesettings = $this->render_grade_settings($gradeitem, $this->page->context);
 
-        // Calculate progress chart data count if allowed in cfg.
-        $progressCompleted = 0;
-        $progressPassed = 0;
-        // Calculate progress charts cfg.
-        if ($this->config['progresscharts'] === true
+        // Calculate progress bar data count if allowed in cfg.
+        $progresscompleted = 0;
+        $progresspassed = 0;
+        // Calculate progress bars cfg.
+        if ($this->config['progressbars'] === true
             || has_capability('format/etask:teacher', $this->page->context)
             || has_capability('format/etask:noneditingteacher', $this->page->context)) {
-            // Init porgress charts data.
-            $progressChartDataInit = [
+            // Init porgress bars data.
+            $progressbardatainit = [
                 'passed' => 0,
                 'completed' => 0,
                 'failed' => 0
             ];
 
-            $progressChartDataCount = array_merge($progressChartDataInit, array_count_values($progressChartData));
-            $progressCompleted = round(100 * (
+            $progressbardatacount = array_merge($progressbardatainit, array_count_values($progressbardata));
+            $progresscompleted = round(100 * (
                 array_sum([
-                    $progressChartDataCount['completed'],
-                    $progressChartDataCount['passed'], $progressChartDataCount['failed']
-                ]) / $studentsCount));
-            $progressPassed = round(100 * ($progressChartDataCount['passed'] / $studentsCount));
+                    $progressbardatacount['completed'],
+                    $progressbardatacount['passed'], $progressbardatacount['failed']
+                ]) / $studentscount));
+            $progresspassed = round(100 * ($progressbardatacount['passed'] / $studentscount));
         }
-        $progressChartCompletedVisibilityClass = empty($progressCompleted) ? 'disabled' : 'enabled';
-        $progressChartPassedVisibilityClass = empty($progressPassed) ? 'disabled' : 'enabled';
 
         // Prepare module icon.
-        $ico = html_writer::img($this->output->pix_url('icon', $gradeItem->itemmodule), '', [
+        $ico = html_writer::img($this->output->image_url('icon', $gradeitem->itemmodule), '', [
             'class' => 'item-ico'
         ]);
 
         // Prepare grade to pass string.
-        $dueDate = $this->etaskLib->getDueDate($gradeItem, $completionExpected);
-        $dueDateValue = !empty($dueDate) ? $dueDate : get_string('notset', 'format_etask');
-        $gradeToPass = round($gradeItem->gradepass, 0);
+        $duedate = $this->etasklib->get_due_date($gradeitem, $completionexpected);
+        $duedatevalue = !empty($duedate) ? $duedate : get_string('notset', 'format_etask');
+        $gradetopass = round($gradeitem->gradepass, 0);
         // Get text value of scale.
-        if (!empty($gradeItem->scaleid) && !empty($gradeToPass)) {
-            $scale = $this->etaskLib->getScale($gradeItem->scaleid);
-            $gradeToPass = $scale[$gradeToPass];
+        if (!empty($gradeitem->scaleid) && !empty($gradetopass)) {
+            $scale = $this->etasklib->get_scale($gradeitem->scaleid);
+            $gradetopass = $scale[$gradetopass];
         }
         // Switch badge type for grade to pass.
-        if (!empty($gradeToPass)) {
-            $gradeToPassValue = $gradeToPass;
-            $badgeType = 'success';
+        if (!empty($gradetopass)) {
+            $gradetopassvalue = $gradetopass;
+            $badgetype = 'success';
         } else {
-            $gradeToPassValue = get_string('notset', 'format_etask');
-            $badgeType = 'secondary';
+            $gradetopassvalue = get_string('notset', 'format_etask');
+            $badgetype = 'secondary';
         }
 
         // Prepare due date string.
-        $dueDateString = html_writer::div(
-            html_writer::img($this->output->pix_url('i/calendar', 'core'), '') .
+        $duedatestring = html_writer::div(
+            html_writer::tag(
+                'i',
+                '', [
+                    'class' => 'fa fa-calendar-check-o',
+                    'area-hidden' => 'true'
+                ]
+            ) .
             ' ' . get_string('duedate', 'assign') . ':' .
             html_writer::empty_tag('br') .
-            html_writer::link('#', $dueDateValue),
+            html_writer::link('#', $duedatevalue),
             'due-date'
         );
 
         // Prepare grade to pass string.
-        $gradeToPassString = html_writer::div(
-            html_writer::img($this->output->pix_url('i/checkpermissions', 'core'), '') .
+        $gradetopassstring = html_writer::div(
+            html_writer::tag('i', '', [
+                'class' => 'fa fa-graduation-cap',
+                'area-hidden' => 'true'
+            ]) .
             ' ' . get_string('gradepass', 'grades') . ': ' .
-            html_writer::tag('span', $gradeToPassValue, [
-                'class' => 'badge badge-pill badge-' . $badgeType
+            html_writer::tag('span', $gradetopassvalue, [
+                'class' => 'badge badge-pill badge-' . $badgetype
             ]),
             'grade-to-pass'
         );
         // Activity popover string.
-        $activityPopoverString = implode(' ', [$dueDateString, $gradeToPassString]);
-        // Activity popover progress chart completed.
-        $progressChartCompleted = html_writer::div(
-            html_writer::div('', 'bar', ['style' => 'width: ' . $progressCompleted . '%']),
-            'progress-chart-completed progress progress-striped progress-warning active'
-            ) . html_writer::div($progressCompleted . '%', 'progress-chart-completed ' . $progressChartCompletedVisibilityClass);
+        $activitypopoverstring = implode(' ', [$duedatestring, $gradetopassstring]);
+        // Activity popover progress bar completed.
+        $datacompleted = new progress_bar($progresscompleted, get_string('activitycompleted', 'format_etask'));
+        $progressbarcompleted = html_writer::tag('div',
+            $this->render($datacompleted),
+            ['class' => 'progress-bar-completed pb-1']);
+        // Activity popover progress bar passed.
+        $datapassed = new progress_bar($progresspassed, get_string('activitypassed', 'format_etask'));
+        $progressbarpassed = html_writer::tag('div',
+            $this->render($datapassed),
+            ['class' => 'progress-bar-passed']);
 
-        // Activity popover progress chart passed.
-        $progressChartPassed = html_writer::div(
-            html_writer::div('', 'bar', ['style' => 'width: ' . $progressPassed . '%']),
-            'progress-chart-passed progress progress-striped progress-success active'
-            ) . html_writer::div($progressPassed . '%', 'progress-chart-passed ' . $progressChartPassedVisibilityClass);
-
-        // Activity popover progress charts.
-        $progressCharts = html_writer::div(
-            html_writer::div($progressChartCompleted, 'span12') .
-            html_writer::div($progressChartPassed, 'span12'),
-            'row-fluid'
+        // Activity popover progress bars.
+        $progressbars = html_writer::div(
+            html_writer::div($progressbarcompleted, 'col-xs-12') .
+            html_writer::div($progressbarpassed, 'col-xs-12'),
+            'row'
         );
 
         // Prepare activity popover.
         $popover = html_writer::div(
             html_writer::div(
-                html_writer::div($progressCharts, 'span5') .
-                html_writer::div($activityPopoverString, 'span7'),
-                'row-fluid'),
+                html_writer::div($progressbars, 'col-xs-5') .
+                html_writer::div($activitypopoverstring, 'col-xs-7'),
+                'row'),
             'popover-container'
         );
 
         // Prepare activity short link.
         if (has_capability('format/etask:teacher', $this->page->context)) {
-            $itemTitleShortLink = html_writer::link(new moodle_url('/course/mod.php', [
-                'sesskey' => $sessKey,
-                'sr' => $sectionReturn,
-                'update' => $cmId
-            ]), $ico . ' ' . $itemTitleShort, [
+            $itemtitleshortlink = html_writer::link(new moodle_url('/course/mod.php', [
+                'sesskey' => $sesskey,
+                'sr' => $sectionreturn,
+                'update' => $cmid
+            ]), $ico . ' ' . $itemtitleshort, [
                 'data-toggle' => 'popover',
-                'title' => get_string('pluginname', $gradeItem->itemmodule) . ': ' . $gradeItem->itemname,
+                'title' => get_string('pluginname', $gradeitem->itemmodule) . ': ' . $gradeitem->itemname,
                 'data-content' => $popover
             ]);
         } else {
-            $itemTitleShortLink = html_writer::link(new moodle_url('/mod/' . $gradeItem->itemmodule . '/view.php', [
-                'id' => $cmId
-            ]), $ico . ' ' . $itemTitleShort, [
+            $itemtitleshortlink = html_writer::link(new moodle_url('/mod/' . $gradeitem->itemmodule . '/view.php', [
+                'id' => $cmid
+            ]), $ico . ' ' . $itemtitleshort, [
                 'data-toggle' => 'popover',
-                'title' => get_string('pluginname', $gradeItem->itemmodule) . ': ' . $gradeItem->itemname,
+                'title' => get_string('pluginname', $gradeitem->itemmodule) . ': ' . $gradeitem->itemname,
                 'data-content' => $popover
             ]);
         }
 
         // Prepare grade item head.
-        $ret = html_writer::div($itemTitleShortLink . $gradeSettings, 'grade-item-container');
+        $ret = html_writer::div($itemtitleshortlink . $gradesettings, 'grade-item-container');
 
         return $ret;
     }
@@ -236,105 +262,56 @@ class format_etask_renderer extends format_section_renderer_base
     /**
      * Html representation of grade settings.
      *
-     * @param grade_item $gradeItem
+     * @param grade_item $gradeitem
      * @param context_course $context
      * @return string
      */
-    private function renderGradeSettings(grade_item $gradeItem, context_course $context)
-    {
-        $gradeSettings = '';
+    private function render_grade_settings(grade_item $gradeitem, context_course $context): string {
+        $gradesettings = '';
 
         if ($this->page->user_is_editing() && has_capability('format/etask:teacher', $context)) {
-            $ico = html_writer::img($this->output->pix_url('t/edit', 'core'), '', [
-                'class' => 'grade-item-dialog pointer',
-                'id' => 'edit-grade-item' . $gradeItem->id
-            ]);
+            $ico = html_writer::span($this->output->pix_icon('t/edit', get_string('edit'), 'core'),
+                'iconsmall grade-item-dialog pointer',
+                ['id' => 'edit-grade-item' . $gradeitem->id]
+            );
 
-            $gradeSettings = $ico . $this->renderGradeSettingsForm($gradeItem);
+            $gradesettings = $ico . html_writer::div($this->render_grade_settings_form($gradeitem), 'grade-settings hide', [
+                'id' => 'grade-settings-edit-grade-item' . $gradeitem->id
+            ]);
         }
 
-        return $gradeSettings;
+        return $gradesettings;
     }
 
     /**
      * Create grade settings form.
      *
-     * @param grade_item $gradeItem
+     * @param grade_item $gradeitem
      * @return string
      */
-    private function renderGradeSettingsForm(grade_item $gradeItem)
-    {
+    private function render_grade_settings_form(grade_item $gradeitem): string {
         $action = new moodle_url('/course/view.php', [
             'id' => $this->page->course->id,
-            'gradeItemId' => $gradeItem->id
+            'gradeItemId' => $gradeitem->id
         ]);
 
-        if (!empty($gradeItem->scaleid)) {
-            $scale = $this->etaskLib->getScale($gradeItem->scaleid);
+        if (!empty($gradeitem->scaleid)) {
+            $scale = $this->etasklib->get_scale($gradeitem->scaleid);
         } else {
-            $gradeMax = round($gradeItem->grademax, 0);
+            $grademax = round($gradeitem->grademax, 0);
 
-            for ($i = $gradeMax; $i >= 1; --$i) {
+            for ($i = $grademax; $i >= 1; --$i) {
                 $scale[$i] = $i;
             }
         }
 
+        $formtitle = html_writer::div(get_string('pluginname', $gradeitem->itemmodule) . ': ' . $gradeitem->itemname, 'title');
         $form = new GradeSettingsForm($action->out(false), [
-            'gradeItem' => $gradeItem,
+            'gradeItem' => $gradeitem,
             'scale' => $scale
         ]);
 
-        // Prepare modal.
-        $modal = html_writer::div(
-            html_writer::div(
-                html_writer::div(
-                    html_writer::div(
-                        html_writer::tag('button',
-                            html_writer::span('&times;', '', ['aria-hidden' => 'true']), [
-                                'type' => 'button',
-                                'class' => 'close',
-                                'data-dismiss' => 'modal',
-                                'aria-label' => get_string('closebuttontitle', 'moodle')
-                            ]
-                        ) . html_writer::tag('h4',
-                            get_string('pluginname', $gradeItem->itemmodule) . ': ' . $gradeItem->itemname, [
-                                'class' => 'modal-title'
-                            ]
-                        ),
-                        'modal-header'
-                    ) . html_writer::div(
-                        $form->render(),
-                        'modal-body'
-                    ) . html_writer::div(
-                        html_writer::tag('button',
-                            get_string('savechanges', 'moodle'), [
-                                'type' => 'button',
-                                'class' => 'btn btn-primary',
-                                'data-dismiss' => 'modal'
-                            ]
-                        ) . html_writer::tag('button',
-                            get_string('cancel', 'moodle'), [
-                                'type' => 'button',
-                                'class' => 'btn btn-secondary',
-                                'data-dismiss' => 'modal'
-                            ]
-                        ),
-                        'modal-footer'
-                    ),
-                    'modal-content'
-                ),
-                'modal-dialog', [
-                    'role' => 'document'
-                ]
-            ),
-            'modal moodle-has-zindex hide', [
-                'aria-hidden' => 'true',
-                'role' => 'dialog',
-                'id' => 'grade-settings-edit-grade-item' . $gradeItem->id
-            ]
-        );
-
-        return html_writer::tag('div', $modal, [
+        return $formtitle . html_writer::tag('div', $form->render(), [
             'class' => 'grade-settings-form'
         ]);
     }
@@ -343,32 +320,31 @@ class format_etask_renderer extends format_section_renderer_base
      * Create grade table form.
      *
      * @param array $groups
-     * @param int $studentsCount
-     * @param int $selectedGroup
+     * @param int $studentscount
+     * @param int $selectedgroup
      * @return string
      */
-    private function renderGradeTableFooter(array $groups, $studentsCount, $selectedGroup = null)
-    {
+    private function render_grade_table_footer(array $groups, int $studentscount, int $selectedgroup = null): string {
         global $SESSION;
 
         $page = isset($SESSION->eTask['page']) ? $SESSION->eTask['page'] : 0;
         $action = new moodle_url('/course/view.php', [
             'id' => $this->page->course->id
         ]);
-        $formRender = '';
+        $formrender = '';
         if (!empty($groups) && (has_capability('format/etask:teacher', $this->page->context)
             || has_capability('format/etask:noneditingteacher', $this->page->context))) {
             $form = new GradeTableForm($action->out(false), [
                 'groups' => $groups,
-                'selectedGroup' => $selectedGroup
+                'selectedGroup' => $selectedgroup
             ]);
 
-            $formRender = $form->render();
+            $formrender = $form->render();
         }
 
-        return html_writer::start_tag('div', ['class' => 'row-fluid grade-table-footer']) .
-                html_writer::div($formRender, 'span4') .
-                html_writer::div($this->paging_bar($studentsCount, $page, $this->config['studentsperpage'], $action), 'span4 text-center') .
+        return html_writer::start_tag('div', ['class' => 'row grade-table-footer']) .
+                html_writer::div($formrender, 'col-md-4') .
+                html_writer::div($this->paging_bar($studentscount, $page, $this->config['studentsperpage'], $action), 'col-md-4') .
                 html_writer::div(html_writer::div(
                     get_string('legend', 'format_etask') . ':' . html_writer::tag(
                         'span',
@@ -379,64 +355,64 @@ class format_etask_renderer extends format_section_renderer_base
                         'class' => 'badge badge-success passed'
                     ]) . html_writer::tag('span', get_string('activityfailed', 'format_etask'), [
                         'class' => 'badge badge-danger failed'
-                    ]), 'legend'), 'span4') .
+                    ]), 'legend'), 'col-md-4') .
                 html_writer::end_tag('div');
     }
 
     /**
      * Html representation of activity body.
      *
-     * @param grade_grade $userGrade
-     * @param grade_item $gradeItem
-     * @param bool $activityCompletionState
+     * @param grade_grade $usergrade
+     * @param grade_item $gradeitem
+     * @param bool $activitycompletionstate
      * @param stdClass $user
      * @return array
      */
-    private function renderActivityBody(
-        grade_grade $userGrade,
-        grade_item $gradeItem,
-        $activityCompletionState,
-        stdClass $user)
-    {
-        $sectionReturn = optional_param('sr', 0, PARAM_INT);
-
-        $finalGrade = (int) $userGrade->finalgrade;
-        $status = $this->etaskLib->getGradeItemStatus($gradeItem, $finalGrade, $activityCompletionState);
-        if (empty($userGrade->rawscaleid) && !empty($finalGrade)) {
-            $gradeValue = $finalGrade;
-        } elseif (!empty($userGrade->rawscaleid) && !empty($finalGrade)) {
-            $scale = $this->etaskLib->getScale($gradeItem->scaleid);
-            $gradeValue = $scale[$finalGrade];
-        } elseif ($status === FormatEtaskLib::STATUS_COMPLETED) {
-            $gradeValue = html_writer::img($this->output->pix_url('i/fa-check-square-o', 'format_etask'), '');
+    private function render_activity_body(
+        grade_grade $usergrade,
+        grade_item $gradeitem,
+        bool $activitycompletionstate,
+        stdClass $user): array {
+        $finalgrade = (int) $usergrade->finalgrade;
+        $status = $this->etasklib->get_grade_item_status($gradeitem, $finalgrade, $activitycompletionstate);
+        if (empty($usergrade->rawscaleid) && !empty($finalgrade)) {
+            $gradevalue = $finalgrade;
+        } else if (!empty($usergrade->rawscaleid) && !empty($finalgrade)) {
+            $scale = $this->etasklib->get_scale($gradeitem->scaleid);
+            $gradevalue = $scale[$finalgrade];
+        } else if ($status === FormatEtaskLib::STATUS_COMPLETED) {
+            $gradevalue = html_writer::tag('i', '', [
+                'class' => 'fa fa-check-square-o',
+                'area-hidden' => 'true'
+            ]);
         } else {
-            $gradeValue = '&ndash;';
+            $gradevalue = '&ndash;';
         }
 
         if (has_capability('format/etask:teacher', $this->page->context)) {
-            $gradeLinkParams = [
+            $gradelinkparams = [
                 'courseid' => $this->page->course->id,
-                'id' => $userGrade->id,
+                'id' => $usergrade->id,
                 'gpr_type' => 'report',
                 'gpr_plugin' => 'grader',
                 'gpr_courseid' => $this->page->course->id
             ];
 
-            if (empty($userGrade->id)) {
-                $gradeLinkParams['userid'] = $user->id;
-                $gradeLinkParams['itemid'] = $gradeItem->id;
+            if (empty($usergrade->id)) {
+                $gradelinkparams['userid'] = $user->id;
+                $gradelinkparams['itemid'] = $gradeitem->id;
             }
 
-            $gradeLink = html_writer::link(new moodle_url('/grade/edit/tree/grade.php', $gradeLinkParams), $gradeValue, [
+            $gradelink = html_writer::link(new moodle_url('/grade/edit/tree/grade.php', $gradelinkparams), $gradevalue, [
                 'class' => 'grade-item-body',
-                'title' => $user->firstname . ' ' . $user->lastname . ': ' . $gradeItem->itemname
+                'title' => $user->firstname . ' ' . $user->lastname . ': ' . $gradeitem->itemname
             ]);
         } else {
-            $gradeLink = $gradeValue;
+            $gradelink = $gradevalue;
         }
 
         return [
-            'text' => $gradeLink,
+            'text' => $gradelink,
             'status' => $status
         ];
     }
@@ -444,27 +420,31 @@ class format_etask_renderer extends format_section_renderer_base
     /**
      * Render flash message.
      *
-     * @param array $messageData
+     * @param array $messagedata
      * @return string
      */
-    public function renderMessage(array $messageData)
-    {
-        $messageString = '';
-        if (!empty($messageData)) {
+    public function render_message(array $messagedata): string {
+        $messagestring = '';
+        if (!empty($messagedata)) {
             $closebutton = html_writer::tag(
                 'button',
                 html_writer::tag('span', '&times;', ['aria-hidden' => 'true']),
-                ['type' => 'button', 'class' => 'close', 'data-dismiss' => 'alert', 'aria-label' => get_string('closebuttontitle', 'moodle')]
+                [
+                    'type' => 'button',
+                    'class' => 'close',
+                    'data-dismiss' => 'alert',
+                    'aria-label' => get_string('closebuttontitle', 'moodle')
+                ]
             );
-            $message = $closebutton . $messageData['message'];
-            if ($messageData['success'] === true) {
-                $messageString = html_writer::div($message, 'alert alert-success', ['data-dismiss' => 'alert']);
+            $message = $closebutton . $messagedata['message'];
+            if ($messagedata['success'] === true) {
+                $messagestring = html_writer::div($message, 'alert alert-success', ['data-dismiss' => 'alert']);
             } else {
-                $messageString = html_writer::div($message, 'alert alert-error', ['data-dismiss' => 'alert']);
+                $messagestring = html_writer::div($message, 'alert alert-error', ['data-dismiss' => 'alert']);
             }
         }
 
-        return $messageString;
+        return $messagestring;
     }
 
     /**
@@ -472,212 +452,221 @@ class format_etask_renderer extends format_section_renderer_base
      *
      * @param context_course $context
      * @param stdClass $course
-     * @param FormatEtaskLib $etaskLib
+     * @param FormatEtaskLib $etasklib
      * @return void
      */
-    public function renderGradeTable(context_course $context, stdClass $course, FormatEtaskLib $etaskLib)
-    {
+    public function render_grade_table(context_course $context, stdClass $course, FormatEtaskLib $etasklib) {
         global $CFG;
         global $USER;
         global $SESSION;
 
-        // Set wwwroot.
-        $wwwroot = !empty($CFG->httpswwwroot) ? $CFG->httpswwwroot : $CFG->wwwroot;
-
         echo '
             <style type="text/css" media="screen" title="Graphic layout" scoped>
             <!--
-                @import "' . $wwwroot . '/course/format/etask/format_etask.css?v=' . get_config('format_etask', 'version') . '";
+                @import "' . $CFG->wwwroot . '/course/format/etask/format_etask.css?v=' . $this->etaskversion . '";
             -->
             </style>';
 
-        $this->etaskLib = $etaskLib;
-        $this->config = $this->etaskLib->getEtaskConfig($course);
+        $this->etasklib = $etasklib;
+        $this->config = $this->etasklib->get_etask_config($course);
 
         // Grade pass save message data.
-        $gradeItemId = optional_param('gradeItemId', 0, PARAM_INT);
-        $messageData = [];
-        if (isset($gradeItemId) && !empty($gradeItemId)) {
-            $messageData = $this->etaskLib->updateGradePass($context, $gradeItemId);
+        $gradeitemid = optional_param('gradeItemId', 0, PARAM_INT);
+        $messagedata = [];
+        if (isset($gradeitemid) && !empty($gradeitemid)) {
+            $messagedata = $this->etasklib->update_grade_pass($context, $gradeitemid);
         }
 
         // Group filter into session.
-        $filterGroup = optional_param('eTaskFilterGroup', 0, PARAM_INT);
-        if (!empty($filterGroup)) {
-            $SESSION->eTask['filtergroup'] = $filterGroup;
+        $filtergroup = optional_param('eTaskFilterGroup', 0, PARAM_INT);
+        if (!empty($filtergroup)) {
+            $SESSION->eTask['filtergroup'] = $filtergroup;
         }
 
         // Pagination page into session.
         $page = optional_param('page', null, PARAM_INT);
         if (!isset($SESSION->eTask['page']) && !isset($page)) {
             $SESSION->eTask['page'] = 0;
-        } elseif (isset($SESSION->eTask['page']) && isset($page)) {
+        } else if (isset($SESSION->eTask['page']) && isset($page)) {
             $SESSION->eTask['page'] = $page;
         }
 
         // Get all course groups and selected group to the group filter form.
-        $allCourseGroups = $this->etaskLib->getCourseGroups((int)$course->id);
-        $allUserGroups = current(groups_get_user_groups($course->id, $USER->id));
-        $selectedGroup = null;
+        $allcoursegroups = $this->etasklib->get_course_groups((int)$course->id);
+        $allusergroups = current(groups_get_user_groups($course->id, $USER->id));
+        $selectedgroup = null;
         if (has_capability('format/etask:teacher', $context)
             || has_capability('format/etask:noneditingteacher', $context)) {
             if (!empty($SESSION->eTask['filtergroup'])) {
-                $selectedGroup = $SESSION->eTask['filtergroup'];
-            } elseif (!empty($allUserGroups)) {
-                $selectedGroup = current($allUserGroups);
+                $selectedgroup = $SESSION->eTask['filtergroup'];
+            } else if (!empty($allusergroups)) {
+                $selectedgroup = current($allusergroups);
             } else {
-                $selectedGroup = key($allCourseGroups);
+                $selectedgroup = key($allcoursegroups);
             }
         }
 
         // Get mod info and prepare mod items.
-        $modInfo = get_fast_modinfo($course);
-        $modItems = $this->etaskLib->getModItems($modInfo);
+        $modinfo = get_fast_modinfo($course);
+        $moditems = $this->etasklib->get_mod_items($modinfo);
 
         // Get all allowed course students.
-        $students = $this->etaskLib->getStudents($context, $course, $selectedGroup);
+        $students = $this->etasklib->get_students($context, $course, $selectedgroup);
         // Students count for pagination.
-        $studentsCount = count($students);
+        $studentscount = count($students);
         // Init grade items and students grades.
-        $gradeItems = [];
-        $usersGrades = [];
+        $gradeitems = [];
+        $usersgrades = [];
         // Collect students grades for all grade items.
         if (!empty($students)) {
-            $gradeItems = grade_item::fetch_all(['courseid' => $course->id, 'itemtype' => 'mod', 'hidden' => 0]);
-            if ($gradeItems === false) {
-                $gradeItems = [];
+            $gradeitems = grade_item::fetch_all(['courseid' => $course->id, 'itemtype' => 'mod', 'hidden' => 0]);
+            if ($gradeitems === false) {
+                $gradeitems = [];
             }
 
-            if (!empty($gradeItems)) {
+            if (!empty($gradeitems)) {
                 // Grade items num.
-                $gradeItemsNum = [];
-                foreach ($gradeItems as $gradeItem) {
-                    if (!isset($initNum[$gradeItem->itemmodule])) {
-                        $initNum[$gradeItem->itemmodule] = 0;
+                $gradeitemsnum = [];
+                foreach ($gradeitems as $gradeitem) {
+                    if (!isset($initnum[$gradeitem->itemmodule])) {
+                        $initnum[$gradeitem->itemmodule] = 0;
                     }
 
-                    if (!isset($gradeItemsNum[$gradeItem->itemmodule][$gradeItem->iteminstance])) {
-                        $gradeItemsNum[$gradeItem->itemmodule][$gradeItem->iteminstance] = ++$initNum[$gradeItem->itemmodule];
+                    if (!isset($gradeitemsnum[$gradeitem->itemmodule][$gradeitem->iteminstance])) {
+                        $gradeitemsnum[$gradeitem->itemmodule][$gradeitem->iteminstance] = ++$initnum[$gradeitem->itemmodule];
                     }
                 }
 
                 // Sorting activities by config.
                 switch ($this->config['activitiessorting']) {
                     case FormatEtaskLib::ACTIVITIES_SORTING_OLDEST:
-                        ksort($gradeItems);
+                        ksort($gradeitems);
                         break;
                     case FormatEtaskLib::ACTIVITIES_SORTING_INHERIT:
-                        $gradeItems = $this->etaskLib->sortGradeItemsBySections($gradeItems, $modItems, $modInfo->sections);
+                        $gradeitems = $this->etasklib->sort_grade_items_by_sections($gradeitems, $moditems, $modinfo->sections);
                         break;
                     default:
-                        krsort($gradeItems);
+                        krsort($gradeitems);
                         break;
                 }
 
-                foreach ($gradeItems as $gradeItem) {
-                    $usersGrades[$gradeItem->id] = grade_grade::fetch_users_grades($gradeItem, array_keys($students), true);
+                foreach ($gradeitems as $gradeitem) {
+                    $usersgrades[$gradeitem->id] = grade_grade::fetch_users_grades($gradeitem, array_keys($students), true);
                 }
             }
         }
 
-        $this->page->requires->js(new moodle_url('/course/format/etask/format_etask.js', ['v' => get_config('format_etask', 'version')]));
+        $this->page->requires->js(
+            new moodle_url('/course/format/etask/format_etask.js', ['v' => $this->etaskversion])
+        );
 
-        $privateView = false;
-        $privateViewUserId = 0;
+        $privateview = false;
+        $privateviewuserid = 0;
         // If private view is active, students can view only own grades.
         if ($this->config['privateview'] === true
             && has_capability('format/etask:student', $context)
             && !has_capability('format/etask:teacher', $context)
             && !has_capability('format/etask:noneditingteacher', $context)) {
-            $privateView = true;
-            $privateViewUserId = $USER->id;
-            $studentsCount = 1;
+            $privateview = true;
+            $privateviewuserid = $USER->id;
+            $studentscount = 1;
         }
 
         $completion = new completion_info($this->page->course);
-        $activityCompletionStates = [];
-        $completionExpected = [];
+        $activitycompletionstates = [];
+        $completionexpected = [];
         $data = [];
-        $progressChartData = [];
+        $progressbardata = [];
         // Move logged in student at the first position in the grade table.
-        if (isset($students[$USER->id]) && $privateView === false) {
-            $loggedInStudent = isset($students[$USER->id]) ? $students[$USER->id] : null;
+        if (isset($students[$USER->id]) && $privateview === false) {
+            $loggedinstudent = isset($students[$USER->id]) ? $students[$USER->id] : null;
             unset($students[$USER->id]);
-            array_unshift($students , $loggedInStudent);
+            array_unshift($students , $loggedinstudent);
         }
         foreach ($students as $user) {
-            $bodyCells = [];
-            if ($privateView === false || ($privateView === true && $user->id === $privateViewUserId)) {
+            $bodycells = [];
+            if ($privateview === false || ($privateview === true && $user->id === $privateviewuserid)) {
                 $cell = new html_table_cell();
-                $cell->text = $this->renderUserHead($user);
+                $cell->text = $this->render_user_head($user);
                 $cell->attributes = [
                     'class' => 'user-header'
                 ];
-                $bodyCells[] = $cell;
+                $bodycells[] = $cell;
             }
 
-            foreach ($modInfo->cms as $cm) {
-                $completionExpected[$cm->id] = $cm->completionexpected;
-                $activityCompletionStates[$cm->id] = (bool) $completion->get_data($cm, true, $user->id, $modInfo)->completionstate;
+            foreach ($modinfo->cms as $cm) {
+                $completionexpected[$cm->id] = $cm->completionexpected;
+                $activitycompletionstates[$cm->id] = (bool) $completion->get_data(
+                    $cm, true, $user->id, $modinfo
+                )->completionstate;
             }
 
-            foreach ($gradeItems as $gradeItem) {
-                $activityCompletionState = $activityCompletionStates[$modItems[$gradeItem->itemmodule][$gradeItem->iteminstance]];
-                $grade = $this->renderActivityBody($usersGrades[$gradeItem->id][$user->id], $gradeItem, $activityCompletionState, $user);
-                $progressChartData[$gradeItem->id][] = $grade['status'];
-                if ($privateView === false || ($privateView === true && $user->id === $privateViewUserId)) {
+            foreach ($gradeitems as $gradeitem) {
+                $activitycompletionstate = $activitycompletionstates[$moditems[$gradeitem->itemmodule][$gradeitem->iteminstance]];
+                $grade = $this->render_activity_body(
+                    $usersgrades[$gradeitem->id][$user->id], $gradeitem, $activitycompletionstate, $user
+                );
+                $progressbardata[$gradeitem->id][] = $grade['status'];
+                if ($privateview === false || ($privateview === true && $user->id === $privateviewuserid)) {
                     $cell = new html_table_cell();
                     $cell->text = $grade['text'];
                     $cell->attributes = [
                         'class' => 'grade-item-grade text-center ' . $grade['status'],
-                        'title' => $user->firstname . ' ' . $user->lastname . ': ' . $gradeItem->itemname
+                        'title' => $user->firstname . ' ' . $user->lastname . ': ' . $gradeitem->itemname
                     ];
-                    $bodyCells[] = $cell;
+                    $bodycells[] = $cell;
                 }
             }
 
-            if ($privateView === false || ($privateView === true && $user->id === $privateViewUserId)) {
-                $row = new html_table_row($bodyCells);
+            if ($privateview === false || ($privateview === true && $user->id === $privateviewuserid)) {
+                $row = new html_table_row($bodycells);
                 $data[] = $row;
             }
         }
         // Table head.
-        $headCells = ['']; // First cell of the head is empty.
+        $headcells = ['']; // First cell of the head is empty.
         // Render table cells.
-        foreach ($gradeItems as $gradeItem) {
-            $cmId = (int) $modItems[$gradeItem->itemmodule][$gradeItem->iteminstance];
+        foreach ($gradeitems as $gradeitem) {
+            $cmid = (int) $moditems[$gradeitem->itemmodule][$gradeitem->iteminstance];
             $cell = new html_table_cell();
-            $cell->text = $this->renderActivitiesHead(
-                $gradeItem,
-                $gradeItemsNum[$gradeItem->itemmodule][$gradeItem->iteminstance],
+            $cell->text = $this->render_activities_head(
+                $gradeitem,
+                $gradeitemsnum[$gradeitem->itemmodule][$gradeitem->iteminstance],
                 count($students),
-                $progressChartData[$gradeItem->id],
-                $cmId,
-                $completionExpected[$cmId]);
+                $progressbardata[$gradeitem->id],
+                $cmid,
+                $completionexpected[$cmid]);
             $cell->attributes = [
                 'class' => 'grade-item-header center '
             ];
-            $headCells[] = $cell;
+            $headcells[] = $cell;
         }
 
-        // Slice of students by paging after geting progres chart data.
-        $SESSION->eTask['page'] = $studentsCount <= $SESSION->eTask['page'] * $this->config['studentsperpage'] ? 0 : $SESSION->eTask['page'];
-        $data = array_slice($data, $SESSION->eTask['page'] * $this->config['studentsperpage'], $this->config['studentsperpage'], $preserve_keys = true);
+        // Slice of students by paging after geting progres bar data.
+        $SESSION->eTask['page'] = $studentscount <= $SESSION->eTask['page'] * $this->config['studentsperpage']
+            ? 0
+            : $SESSION->eTask['page'];
+        $data = array_slice(
+            $data,
+            $SESSION->eTask['page'] * $this->config['studentsperpage'],
+            $this->config['studentsperpage'],
+            true
+        );
 
         // Html table.
-        $gradeTable = new html_table();
-        $gradeTable->attributes = [
+        $gradetable = new html_table();
+        $gradetable->attributes = [
             'class' => 'grade-table table-hover table-striped table-condensed table-responsive',
             'table-layout' => 'fixed'
         ];
-        $gradeTable->head = $headCells;
-        $gradeTable->data = $data;
+        $gradetable->head = $headcells;
+        $gradetable->data = $data;
 
         // Grade table footer: groups filter, pagination and legend.
-        $gradeTableFooter = $this->renderGradeTableFooter($allCourseGroups, $studentsCount, $selectedGroup);
+        $gradetablefooter = $this->render_grade_table_footer($allcoursegroups, $studentscount, $selectedgroup);
 
         echo html_writer::div(
-            $this->renderMessage($messageData) . html_writer::div(html_writer::table($gradeTable), 'table-responsive') . $gradeTableFooter,
+            $this->render_message($messagedata) . html_writer::table($gradetable) . $gradetablefooter,
             'etask-grade-table ' . $this->config['placement']
         );
     }
@@ -707,14 +696,36 @@ class format_etask_renderer extends format_section_renderer_base
     }
 
     /**
-     * Generate the edit controls of a section
+     * Generate the section title, wraps it in a link to the section page if page is to be displayed on a separate page.
+     *
+     * @param section_info $section The course_section entry from DB
+     * @param stdClass $course The course entry from DB
+     * @return string HTML to output.
+     */
+    public function section_title($section, $course) {
+        return $this->render(course_get_format($course)->inplace_editable_render_section_name($section));
+    }
+
+    /**
+     * Generate the section title to be displayed on the section page, without a link.
+     *
+     * @param stdClass $section The course_section entry from DB
+     * @param stdClass $course The course entry from DB
+     * @return string HTML to output.
+     */
+    public function section_title_without_link($section, $course) {
+        return $this->render(course_get_format($course)->inplace_editable_render_section_name($section, false));
+    }
+
+    /**
+     * Generate the edit control items of a section.
      *
      * @param stdClass $course The course entry from DB
-     * @param stdClass $section The course_section entry from DB
+     * @param section_info $section The course_section entry from DB
      * @param bool $onsectionpage true if being printed on a section page
-     * @return array of links with edit controls
+     * @return array of edit control items
      */
-    protected function section_edit_controls($course, $section, $onsectionpage = false) {
+    protected function section_edit_control_items($course, $section, $onsectionpage = false) {
         global $PAGE;
 
         if (!$PAGE->user_is_editing()) {
@@ -730,24 +741,45 @@ class format_etask_renderer extends format_section_renderer_base
         }
         $url->param('sesskey', sesskey());
 
-        $isstealth = $section->section > $course->numsections;
         $controls = array();
-        if (!$isstealth && has_capability('moodle/course:setcurrentsection', $coursecontext)) {
+        if ($section->section && has_capability('moodle/course:setcurrentsection', $coursecontext)) {
             if ($course->marker == $section->section) {  // Show the "light globe" on/off.
                 $url->param('marker', 0);
-                $controls[] = html_writer::link($url,
-                                    html_writer::empty_tag('img', array('src' => $this->output->pix_url('i/marked'),
-                                        'class' => 'icon ', 'alt' => get_string('markedthistopic'))),
-                                    array('title' => get_string('markedthistopic'), 'class' => 'editing_highlight'));
+                $highlightoff = get_string('highlightoff');
+                $controls['highlight'] = array('url' => $url, "icon" => 'i/marked',
+                                               'name' => $highlightoff,
+                                               'pixattr' => array('class' => ''),
+                                               'attr' => array('class' => 'editing_highlight',
+                                                   'data-action' => 'removemarker'));
             } else {
                 $url->param('marker', $section->section);
-                $controls[] = html_writer::link($url,
-                                html_writer::empty_tag('img', array('src' => $this->output->pix_url('i/marker'),
-                                    'class' => 'icon', 'alt' => get_string('markthistopic'))),
-                                array('title' => get_string('markthistopic'), 'class' => 'editing_highlight'));
+                $highlight = get_string('highlight');
+                $controls['highlight'] = array('url' => $url, "icon" => 'i/marker',
+                                               'name' => $highlight,
+                                               'pixattr' => array('class' => ''),
+                                               'attr' => array('class' => 'editing_highlight',
+                                                   'data-action' => 'setmarker'));
             }
         }
 
-        return array_merge($controls, parent::section_edit_controls($course, $section, $onsectionpage));
+        $parentcontrols = parent::section_edit_control_items($course, $section, $onsectionpage);
+
+        // If the edit key exists, we are going to insert our controls after it.
+        if (array_key_exists("edit", $parentcontrols)) {
+            $merged = array();
+            // We can't use splice because we are using associative arrays.
+            // Step through the array and merge the arrays.
+            foreach ($parentcontrols as $key => $action) {
+                $merged[$key] = $action;
+                if ($key == "edit") {
+                    // If we have come to the edit key, merge these controls here.
+                    $merged = array_merge($merged, $controls);
+                }
+            }
+
+            return $merged;
+        } else {
+            return array_merge($controls, $parentcontrols);
+        }
     }
 }

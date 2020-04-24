@@ -13,22 +13,29 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
- * Settings.
+ * Privacy Subsystem implementation for format_etask.
  *
  * @package    format_etask
- * @copyright  2017 Martin Drlik <martin.drlik@email.cz>
+ * @copyright  2018 Carlos Escobedo <carlos@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+namespace format_etask\privacy;
 defined('MOODLE_INTERNAL') || die();
-
-$settings->add(
-    new admin_setting_configtextarea(
-        'format_etask/registered_due_date_modules',
-        get_string('registeredduedatemodules', 'format_etask'),
-        get_string('registeredduedatemodules_help', 'format_etask'),
-        'assign:duedate, forum:duedate, lesson:deadline, lucson:deadline, quiz:timeclose, scorm:timeclose, workshop:submissionend'
-    )
-);
+/**
+ * Privacy Subsystem for format_etask implementing null_provider.
+ *
+ * @copyright  2018 Carlos Escobedo <carlos@moodle.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class provider implements \core_privacy\local\metadata\null_provider {
+    /**
+     * Get the language string identifier with the component's language
+     * file to explain why this plugin stores no data.
+     *
+     * @return  string
+     */
+    public static function get_reason() : string {
+        return 'privacy:metadata';
+    }
+}

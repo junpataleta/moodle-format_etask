@@ -38,24 +38,24 @@ class GradeTableForm extends moodleform
     /**
      * Called to define this moodle form.
      *
+     * @throws coding_exception
      * @return void
      */
-    public function definition()
-    {
+    public function definition() {
         $groups = $this->_customdata['groups'];
         $selected = $this->_customdata['selectedGroup'];
 
-        $mForm =& $this->_form; // Don't forget the underscore.
-        $mForm->updateAttributes(['class' => 'inline-form groups']);
+        $mform =& $this->_form; // Don't forget the underscore.
+        $mform->updateAttributes(['class' => 'inline-form groups']);
 
         // Select element.
-        $select = $mForm->addElement(
+        $select = $mform->addElement(
             'select',
             'eTaskFilterGroup',
             get_string('group') . ':',
             $groups,
             ['onchange' => 'this.form.submit();']);
         $select->setSelected($selected);
-        $mForm->disable_form_change_checker();
+        $mform->disable_form_change_checker();
     }
 }

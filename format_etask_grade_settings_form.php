@@ -38,31 +38,31 @@ class GradeSettingsForm extends moodleform
     /**
      * Called to define this moodle form.
      *
+     * @throws coding_exception
      * @return void
      */
-    public function definition()
-    {
-        $gradeItem = $this->_customdata['gradeItem'];
+    public function definition() {
+        $gradeitem = $this->_customdata['gradeItem'];
 
-        $mForm =& $this->_form; // Don't forget the underscore.
-        $mForm->updateAttributes(['id' => 'grade-pass-form' . $gradeItem->id, 'class' => 'inline-form grade-to-pass']);
+        $mform =& $this->_form; // Don't forget the underscore.
+        $mform->updateAttributes(['id' => 'grade-pass-form' . $gradeitem->id, 'class' => 'inline-form grade-to-pass']);
 
         $scale = $this->_customdata['scale'];
         $scale[0] = '-';
         ksort($scale);
 
-        $selected = round($gradeItem->gradepass, 0);
+        $selected = round($gradeitem->gradepass, 0);
 
-        $gradePassName = 'gradePass' . $gradeItem->id;
+        $gradepassname = 'gradePass' . $gradeitem->id;
 
         // Select element.
-        $select = $mForm->addElement(
+        $select = $mform->addElement(
             'select',
-            $gradePassName,
+            $gradepassname,
             get_string('gradepass', 'grades') . ':',
             $scale
         );
         $select->setSelected($selected);
-        $mForm->disable_form_change_checker();
+        $mform->disable_form_change_checker();
     }
 }
