@@ -3,79 +3,31 @@
     width: 430px;
     max-width: 700px;
 }
-.popover-container img {
-    vertical-align: text-bottom;
-}
-.popover-container .grade-to-pass {
+.popover-body .grade-to-pass {
     padding-top: 8px;
 }
 .badge.badge-success {
-    background-color: #28a745 !important;
+    background-color: #28a745;
 }
-/* Progress charts. */
-.popover-content {
-    font-size: .775rem !important;
+/* Progress bars. */
+.progress-bar-passed .progress-bar.bar {
+    background-color: #28a745;
 }
-.popover-content .badge {
-    font-size: .675rem;
-    padding: 0 4px;
-}
-.popover-container .row-fluid .span12 {
-    margin: 0;
-}
-.popover-container .progress {
-    margin-bottom: 0;
-    height: 14px;
-}
-.popover-container .progress.progress-chart-passed {
-    margin-top: 0.3rem;
-}
-.popover-container .progress-chart-completed.enabled {
-    text-align: center;
-    color: #ffc107;
-}
-.popover-container .progress-chart-passed.enabled {
-    text-align: center;
-    color: #28a745;
-}
-.popover-container .progress-chart-completed.disabled {
-    text-align: center;
-    color: #eee;
-}
-.popover-container .progress-chart-passed.disabled {
-    text-align: center;
-    color: #eee;
-}
-.popover-container .progress-success.progress-striped .bar {
-    background-color: #28a745 !important;
-}
-.popover-container .progress-warning.progress-striped .bar {
-    background-color: #ffc107 !important;
-}
-/* Grade settings modal. */
-.grade-settings-form h4 {
-    text-align: left;
+.progress-bar-completed .progress-bar.bar {
+    background-color: #ffc107;
 }
 /* Section line. */
 .etask-grade-table.above {
-    border-bottom: 2px solid #ddd;
+    border-bottom: 1px solid #dee2e6;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
 }
 .etask-grade-table.below {
+    border-top: 1px solid #dee2e6;
     padding-top: 1rem;
     margin-top: 1rem;
 }
 /* Grade table. */
-.etask-grade-table .table-responsive {
-    display: block;
-    width: auto;
-    min-height: .01%;
-    overflow-x: auto;
-}
-.etask-grade-table .table-condensed td {
-    padding: 0;
-}
 .etask-grade-table img.item-ico {
     width: 16px;
     height: 16px;
@@ -83,9 +35,8 @@
 .etask-grade-table th.grade-item-header {
     min-width: 50px;
     height: 35px;
-    padding: 0px 5px;
+    padding: 8px 5px;
     white-space: nowrap;
-    text-align: center;
 }
 .etask-grade-table td.user-header {
     min-width: 130px;
@@ -106,58 +57,58 @@
 .etask-grade-table .grade-item-dialog {
     opacity: 0.5;
 }
-img.grade-item-dialog {
+.grade-item-dialog i.icon {
     margin: 0 0 0 3px;
 }
 /* Grade table activity colors. */
 .etask-grade-table .completed {
-    color: #fff !important;
-    background-color: #ffc107 !important;
+    color: #fff;
+    background-color: #ffc107;
 }
 .etask-grade-table .passed {
-    color: #fff !important;
-    background-color: #28a745 !important;
+    color: #fff;
+    background-color: #28a745;
 }
 .etask-grade-table .failed {
-    color: #fff !important;
-    background-color: #dc3545 !important;
+    color: #fff;
+    background-color: #dc3545;
 }
 .etask-grade-table .completed a {
-    color: #fff !important;
+    color: #fff;
 }
 .etask-grade-table .passed a {
-    color: #fff !important;
+    color: #fff;
 }
 .etask-grade-table .failed a {
-    color: #fff !important;
+    color: #fff;
 }
 /* Legend. */
 .etask-grade-table .legend {
     line-height: 2.5em;
     text-align: right;
-    padding: 5px 0 20px 0;
+    padding-bottom: 20px;
 }
 .etask-grade-table .legend span {
     padding: 8px;
     margin-left: 10px;
 }
 /* Hack of mform. */
-.grade-table-footer .fitemtitle {
-    float: left;
-    width: 100px;
-    padding-top: 5px;
+.inline-form .form-group {
+    margin-left: 0;
 }
-.grade-table-footer form {
-    margin-top: 8px;
+.inline-form .form-group .col-md-3,
+.inline-form .form-group .col-md-9 {
+    padding-left: 0;
 }
-.grade-settings-form .fitemtitle {
-    float: left;
-    width: 130px;
-    padding-top: 5px;
+.inline-form .form-group .col-md-3 {
+    margin-top: 5px;
 }
 /* Pagination. */
-.etask-grade-table .paging {
-    margin-top: 12px;
+.etask-grade-table nav ul {
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    margin-top: 0;
 }
 .grade-table-footer {
     margin-top: 13px;

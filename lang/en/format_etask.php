@@ -23,8 +23,12 @@
  */
 
 // Topics format strings.
+$string['addsections'] = 'Add topics';
 $string['currentsection'] = 'This topic';
+$string['editsection'] = 'Edit topic';
+$string['editsectionname'] = 'Edit topic name';
 $string['deletesection'] = 'Delete topic';
+$string['newsectionname'] = 'New name for topic {$a}';
 $string['sectionname'] = 'Topic';
 $string['pluginname'] = 'eTask topics format';
 $string['section0name'] = 'General';
@@ -32,15 +36,16 @@ $string['page-course-view-topics'] = 'Any course main page in eTask topics forma
 $string['page-course-view-topics-x'] = 'Any course page in eTask topics format';
 $string['hidefromothers'] = 'Hide topic';
 $string['showfromothers'] = 'Show topic';
+$string['privacy:metadata'] = 'The eTask topics format plugin does not store any personal data.';
 // Course format settings strings.
 $string['privateview'] = 'eTask private view';
 $string['privateview_help'] = 'This settings determines whether all the students can see each other\'s grades in the eTask grading table or not.';
 $string['privateview_no'] = 'Each student can see the grades of the other students in the course/group';
 $string['privateview_yes'] = 'Logged in student can see own grades only';
-$string['progresscharts'] = 'eTask progress charts';
-$string['progresscharts_help'] = 'This settings determines whether progress charts Completed and Passed are calculated in the eTask grading table activity popover or not.';
-$string['progresscharts_donotcalculate'] = 'Do not calculate progress charts Completed and Passed';
-$string['progresscharts_calculate'] = 'Calculate progress charts Completed and Passed';
+$string['progressbars'] = 'eTask progress bars';
+$string['progressbars_help'] = 'This settings determines whether progress bars Completed and Passed are calculated in the eTask grading table activity popover or not.';
+$string['progressbars_donotcalculate'] = 'Do not calculate progress bars Completed and Passed';
+$string['progressbars_calculate'] = 'Calculate progress bars Completed and Passed';
 $string['studentsperpage'] = 'eTask students per page';
 $string['studentsperpage_help'] = 'This settings determines the number of students per page in the eTask grading table.';
 $string['activitiessorting'] = 'eTask activities sorting';
