@@ -1,0 +1,164 @@
+/* Popover. */
+.popover {
+    width: 430px;
+    max-width: 700px;
+}
+.popover-container img {
+    vertical-align: text-bottom;
+}
+.popover-container .grade-to-pass {
+    padding-top: 8px;
+}
+.badge.badge-success {
+    background-color: #28a745 !important;
+}
+/* Progress charts. */
+.popover-content {
+    font-size: .775rem !important;
+}
+.popover-content .badge {
+    font-size: .675rem;
+    padding: 0 4px;
+}
+.popover-container .row-fluid .span12 {
+    margin: 0;
+}
+.popover-container .progress {
+    margin-bottom: 0;
+    height: 14px;
+}
+.popover-container .progress.progress-chart-passed {
+    margin-top: 0.3rem;
+}
+.popover-container .progress-chart-completed.enabled {
+    text-align: center;
+    color: #ffc107;
+}
+.popover-container .progress-chart-passed.enabled {
+    text-align: center;
+    color: #28a745;
+}
+.popover-container .progress-chart-completed.disabled {
+    text-align: center;
+    color: #eee;
+}
+.popover-container .progress-chart-passed.disabled {
+    text-align: center;
+    color: #eee;
+}
+.popover-container .progress-success.progress-striped .bar {
+    background-color: #28a745 !important;
+}
+.popover-container .progress-warning.progress-striped .bar {
+    background-color: #ffc107 !important;
+}
+/* Grade settings modal. */
+.grade-settings-form h4 {
+    text-align: left;
+}
+/* Section line. */
+.etask-grade-table.above {
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+}
+.etask-grade-table.below {
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+/* Grade table. */
+.etask-grade-table .table-responsive {
+    display: block;
+    width: auto;
+    min-height: .01%;
+    overflow-x: auto;
+}
+.etask-grade-table .table-condensed td {
+    padding: 0;
+}
+.etask-grade-table img.item-ico {
+    width: 16px;
+    height: 16px;
+}
+.etask-grade-table th.grade-item-header {
+    min-width: 50px;
+    height: 35px;
+    padding: 0px 5px;
+    white-space: nowrap;
+    text-align: center;
+}
+.etask-grade-table td.user-header {
+    min-width: 130px;
+    padding-right: 5px;
+    white-space: nowrap;
+    height: 37px;
+}
+.etask-grade-table table .text-center {
+    text-align: center;
+}
+.etask-grade-table td a.grade-item-body {
+    display: block;
+    width: 100%;
+}
+.etask-grade-table .pointer {
+    cursor: pointer;
+}
+.etask-grade-table .grade-item-dialog {
+    opacity: 0.5;
+}
+img.grade-item-dialog {
+    margin: 0 0 0 3px;
+}
+/* Grade table activity colors. */
+.etask-grade-table .completed {
+    color: #fff !important;
+    background-color: #ffc107 !important;
+}
+.etask-grade-table .passed {
+    color: #fff !important;
+    background-color: #28a745 !important;
+}
+.etask-grade-table .failed {
+    color: #fff !important;
+    background-color: #dc3545 !important;
+}
+.etask-grade-table .completed a {
+    color: #fff !important;
+}
+.etask-grade-table .passed a {
+    color: #fff !important;
+}
+.etask-grade-table .failed a {
+    color: #fff !important;
+}
+/* Legend. */
+.etask-grade-table .legend {
+    line-height: 2.5em;
+    text-align: right;
+    padding: 5px 0 20px 0;
+}
+.etask-grade-table .legend span {
+    padding: 8px;
+    margin-left: 10px;
+}
+/* Hack of mform. */
+.grade-table-footer .fitemtitle {
+    float: left;
+    width: 100px;
+    padding-top: 5px;
+}
+.grade-table-footer form {
+    margin-top: 8px;
+}
+.grade-settings-form .fitemtitle {
+    float: left;
+    width: 130px;
+    padding-top: 5px;
+}
+/* Pagination. */
+.etask-grade-table .paging {
+    margin-top: 12px;
+}
+.grade-table-footer {
+    margin-top: 13px;
+}
